@@ -1,12 +1,17 @@
-import { Component, computed, effect, signal } from '@angular/core';
-import { Actividad, EstadoActividad, FiltroEstado, FiltroPrioridad, Prioridad } from '../modelos/actividad';
+import { Component, computed, signal } from '@angular/core';
+import { PanelSeccion } from '../../compartido/panel-seccion/panel-seccion';
+import { Actividad, EstadoActividad, FiltroEstado, FiltroPrioridad, Prioridad } from '../../modelos/actividad';
+import { FiltrosActividades } from '../filtros-actividades/filtros-actividades';
+import { ListaActividades } from '../lista-actividades/lista-actividades';
+import { ResumenActividades } from '../resumen-actividades/resumen-actividades';
 
 @Component({
-  selector: 'app-tablero-prioridades',
-  templateUrl: './tablero-prioridades.html',
-  styleUrl: './tablero-prioridades.css',
+  selector: 'app-pagina-actividades',
+  imports: [PanelSeccion, ResumenActividades, FiltrosActividades, ListaActividades],
+  templateUrl: './pagina-actividades.html',
+  styleUrl: './pagina-actividades.css',
 })
-export class TableroPrioridades {
+export class PaginaActividades {
   private readonly orden: Record<Prioridad, number> = { alta: 0, media: 1, baja: 2 };
 
   protected readonly actividades = signal<Actividad[]>([
@@ -88,22 +93,8 @@ export class TableroPrioridades {
     this.seleccionadaId.update((actual) => (actual === id ? null : actual));
   }
 
-  private siguienteEstado(estado: EstadoActividad): EstadoActividad {
-    if (estado === 'pendiente') return 'en_progreso';
-    if (estado === 'en_progreso') return 'completada';
-    return 'completada';
-  }
-
-  protected buscar(evento: Event): void {
-    this.termino.set((evento.target as HTMLInputElement).value);
-  }
-
-  protected cambiarFiltroEstado(evento: Event): void {
-    this.filtroEstado.set((evento.target as HTMLSelectElement).value as FiltroEstado);
-  }
-
-  protected cambiarFiltroPrioridad(evento: Event): void {
-    this.filtroPrioridad.set((evento.target as HTMLSelectElement).value as FiltroPrioridad);
+  protected seleccionar(id: number): void {
+    this.seleccionadaId.update((actual) => (actual === id ? null : id));
   }
 
   protected limpiarFiltros(): void {
@@ -112,19 +103,15 @@ export class TableroPrioridades {
     this.filtroPrioridad.set('todas');
   }
 
-  protected seleccionar(id: number): void {
-    this.seleccionadaId.update((actual) => (actual === id ? null : id));
-  }
-
   protected restablecer(): void {
     this.actividades.set([]);
     this.limpiarFiltros();
     this.seleccionadaId.set(null);
   }
 
-  constructor() {
-    effect(() => {
-      console.info(`[Tablero] ${this.mostradas()} de ${this.total()} visibles`);
-    });
+  private siguienteEstado(estado: EstadoActividad): EstadoActividad {
+    if (estado === 'pendiente') return 'en_progreso';
+    if (estado === 'en_progreso') return 'completada';
+    return 'completada';
   }
 }
