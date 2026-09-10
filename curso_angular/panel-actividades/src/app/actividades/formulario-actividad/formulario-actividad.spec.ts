@@ -1,16 +1,20 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { ActividadesService } from '../actividades';
+import { REMOTAS } from '../../pruebas/datos-remotos';
 import { FormularioActividad } from './formulario-actividad';
 
 describe('FormularioActividad', () => {
+  let http: HttpTestingController;
+
   beforeEach(async () => {
-    localStorage.clear();
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       imports: [FormularioActividad],
-      providers: [provideRouter([])],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
   });
 
   function crear(id?: string) {
@@ -18,6 +22,7 @@ describe('FormularioActividad', () => {
     if (id !== undefined) {
       fixture.componentRef.setInput('id', id);
     }
+    http.match('/api/actividades').forEach((p) => p.flush(REMOTAS));
     fixture.detectChanges();
     return fixture;
   }
@@ -31,7 +36,7 @@ describe('FormularioActividad', () => {
 
     const editar = crear('2');
     expect(editar.nativeElement.textContent).toContain('Editar actividad');
-    expect(editar.nativeElement.querySelector('#titulo').value).toBe('Revisar contraste');
+    expect(editar.nativeElement.querySelector('#titulo').value).toBe('Preparar la reunión');
   });
 
   it('no habilita descartar hasta que algo cambia', () => {
@@ -53,17 +58,12 @@ describe('FormularioActividad', () => {
     const fixture = crear();
     const instancia = fixture.componentInstance as unknown as Record<string, any>;
 
-    instancia['modelo'].set({ titulo: 'Revisar contraste', descripcion: 'Sin perder esto', prioridad: 'alta' });
+    instancia['modelo'].set({ titulo: 'Revisar el informe', descripcion: 'Sin perder esto', prioridad: 'alta' });
     fixture.detectChanges();
     instancia['enviar']();
     fixture.detectChanges();
 
     expect(instancia['errorEnvio']()).toContain('Ya existe');
     expect(instancia['modelo']().descripcion).toBe('Sin perder esto');
-  });
-
-  it('deja guardar una edicion sin cambiar el titulo', () => {
-    const servicio = TestBed.inject(ActividadesService);
-    expect(servicio.actualizar(2, 'Revisar contraste', 'otra descripcion', 'alta')).toBe(true);
   });
 });

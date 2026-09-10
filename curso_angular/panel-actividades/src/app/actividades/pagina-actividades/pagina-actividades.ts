@@ -1,4 +1,8 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { debounceTime, of, switchMap } from 'rxjs';
+import { ActividadesApi } from '../../api/actividades-api';
+import { Actividad } from '../../modelos/actividad';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { PanelSeccion } from '../../compartido/panel-seccion/panel-seccion';
 import { FiltroEstado, FiltroPrioridad, Prioridad } from '../../modelos/actividad';
@@ -19,9 +23,10 @@ export class PaginaActividades {
   private readonly servicio = inject(ActividadesService);
 
   protected readonly actividades = this.servicio.actividades;
-  protected readonly aviso = this.servicio.aviso;
-  protected readonly sinGuardar = this.servicio.sinGuardar;
+  protected readonly cargando = this.servicio.cargando;
+  protected readonly errorCarga = this.servicio.error;
 
+  private readonly api = inject(ActividadesApi);
   private readonly router = inject(Router);
   private readonly ruta = inject(ActivatedRoute);
 
@@ -114,9 +119,19 @@ export class PaginaActividades {
     });
   }
 
-  protected restablecer(): void {
-    this.servicio.vaciar();
-    this.limpiarFiltros();
-    this.seleccionadaId.set(null);
+  protected recargar(): void {
+    this.servicio.cargar();
+  }
+
+  protected readonly resultados = signal<Actividad[] | null>(null);
+
+  constructor() {
+    toObservable(this.termino)
+      .pipe(
+        debounceTime(300),
+        switchMap((t) => (t.trim() === '' ? of(null) : this.api.buscar(t))),
+        takeUntilDestroyed(),
+      )
+      .subscribe((r) => this.resultados.set(r));
   }
 }

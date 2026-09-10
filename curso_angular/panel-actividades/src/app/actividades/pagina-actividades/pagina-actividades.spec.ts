@@ -1,17 +1,25 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { REMOTAS } from '../../pruebas/datos-remotos';
 import { PaginaActividades } from './pagina-actividades';
 
 describe('PaginaActividades', () => {
+  let http: HttpTestingController;
+
   beforeEach(async () => {
+    TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       imports: [PaginaActividades],
-      providers: [provideRouter([])],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
   });
 
   function crear() {
     const fixture = TestBed.createComponent(PaginaActividades);
+    http.match('/api/actividades').forEach((p) => p.flush(REMOTAS));
     fixture.detectChanges();
     return fixture.componentInstance as unknown as Record<string, any>;
   }

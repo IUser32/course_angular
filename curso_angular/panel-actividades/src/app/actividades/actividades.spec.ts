@@ -1,42 +1,94 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { vi } from 'vitest';
 import { ActividadesService } from './actividades';
 
-const CLAVE = 'panel.actividades.v1';
+const REMOTAS = [
+  { id: 1, task_title: 'Revisar el informe', description: null, priority_level: 3, is_done: false, created_at: '2026-08-10T09:00:00Z' },
+  { id: 2, task_title: 'Preparar la reunión', description: null, priority_level: 2, is_done: false, created_at: '2026-08-12T09:00:00Z' },
+  { id: 3, task_title: 'Llamar al proveedor', description: null, priority_level: 1, is_done: true, created_at: '2026-08-14T09:00:00Z' },
+];
 
 describe('ActividadesService', () => {
+  let http: HttpTestingController;
+
   beforeEach(() => {
-    localStorage.clear();
     TestBed.resetTestingModule();
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
+    http = TestBed.inject(HttpTestingController);
   });
 
-  it('should be created', () => {
-    expect(TestBed.inject(ActividadesService)).toBeTruthy();
-  });
-
-  it('guarda cada cambio sin que la operacion se acuerde de hacerlo', () => {
+  function arrancar(cuerpo: object = REMOTAS) {
     const servicio = TestBed.inject(ActividadesService);
-    servicio.eliminar(1);
+    http.expectOne('/api/actividades').flush(cuerpo);
+    return servicio;
+  }
 
+  it('traduce los nombres del servidor al dominio', () => {
+    const servicio = arrancar();
+
+    expect(servicio.total()).toBe(3);
+    expect(servicio.buscarPorId(1)?.titulo).toBe('Revisar el informe');
+    expect(servicio.buscarPorId(3)?.estado).toBe('completada');
+    expect(servicio.buscarPorId(1)?.prioridad).toBe('alta');
+  });
+
+  it('acepta el id como texto, que es como lo sirve json-server', () => {
+    const servicio = arrancar([{ ...REMOTAS[0], id: '1' }]);
+
+    expect(servicio.total()).toBe(1);
+    expect(servicio.buscarPorId(1)?.titulo).toBe('Revisar el informe');
+  });
+
+  it('descarta lo que no encaja en vez de reventar', () => {
+    const servicio = arrancar([REMOTAS[0], { id: 2, task_title: 'Sin fecha' }]);
+
+    expect(servicio.total()).toBe(1);
+    expect(servicio.error()).toBe('');
+  });
+
+  it('reintenta dos veces una lectura fallida y despues apaga el cargando', async () => {
+    vi.useFakeTimers();
+    const servicio = TestBed.inject(ActividadesService);
+
+    http.expectOne('/api/actividades').error(new ProgressEvent('error'), { status: 0 });
+    await vi.advanceTimersByTimeAsync(400);
+
+    http.expectOne('/api/actividades').error(new ProgressEvent('error'), { status: 0 });
+    await vi.advanceTimersByTimeAsync(700);
+
+    http.expectOne('/api/actividades').error(new ProgressEvent('error'), { status: 0 });
+
+    expect(servicio.cargando()).toBe(false);
+    expect(servicio.error()).toContain('No se pudo conectar');
+    vi.useRealTimers();
+  });
+
+  it('deshace la creacion que el servidor rechaza', () => {
+    const servicio = arrancar();
+
+    expect(servicio.crear('Actividad nueva', '', 'media')).not.toBeNull();
     expect(servicio.total()).toBe(4);
-    expect(JSON.parse(localStorage.getItem(CLAVE) ?? '[]')).toHaveLength(4);
+
+    http.expectOne('/api/actividades').error(new ProgressEvent('error'), { status: 500 });
+
+    expect(servicio.total()).toBe(3);
+    expect(servicio.error()).toContain('servidor');
   });
 
-  it('conserva una lista vacia al recargar, en vez de volver a los ejemplos', () => {
-    TestBed.inject(ActividadesService).vaciar();
+  it('devuelve la actividad eliminada si el servidor no acepta el borrado', () => {
+    const servicio = arrancar();
+    servicio.eliminar(2);
 
-    TestBed.resetTestingModule();
-    TestBed.configureTestingModule({});
+    expect(servicio.total()).toBe(2);
 
-    expect(TestBed.inject(ActividadesService).total()).toBe(0);
+    http.expectOne('/api/actividades/2').error(new ProgressEvent('error'), { status: 500 });
+
+    expect(servicio.total()).toBe(3);
   });
 
-  it('avisa y se queda con los ejemplos cuando lo guardado no pasa el guardian', () => {
-    localStorage.setItem(CLAVE, '[{"id":1}]');
-
-    const servicio = TestBed.inject(ActividadesService);
-
-    expect(servicio.total()).toBe(5);
-    expect(servicio.aviso()).not.toBe('');
-  });
+  afterEach(() => http.verify());
 });
