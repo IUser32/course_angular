@@ -1,4 +1,5 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { PanelSeccion } from '../../compartido/panel-seccion/panel-seccion';
 import { FiltroEstado, FiltroPrioridad, Prioridad } from '../../modelos/actividad';
 import { ActividadesService } from '../actividades';
@@ -21,9 +22,17 @@ export class PaginaActividades {
   protected readonly aviso = this.servicio.aviso;
   protected readonly sinGuardar = this.servicio.sinGuardar;
 
-  protected readonly termino = signal('');
-  protected readonly filtroEstado = signal<FiltroEstado>('todas');
-  protected readonly filtroPrioridad = signal<FiltroPrioridad>('todas');
+  private readonly router = inject(Router);
+  private readonly ruta = inject(ActivatedRoute);
+
+  readonly buscar = input<string | undefined>('');
+  readonly estado = input<FiltroEstado | undefined>('todas');
+  readonly prioridad = input<FiltroPrioridad | undefined>('todas');
+
+  protected readonly termino = computed(() => this.buscar() ?? '');
+  protected readonly filtroEstado = computed(() => this.estado() ?? 'todas');
+  protected readonly filtroPrioridad = computed(() => this.prioridad() ?? 'todas');
+
   protected readonly seleccionadaId = signal<number | null>(null);
 
   protected readonly total = this.servicio.total;
@@ -80,10 +89,29 @@ export class PaginaActividades {
     this.seleccionadaId.update((actual) => (actual === id ? null : id));
   }
 
+  protected cambiarBuscar(valor: string): void {
+    this.actualizar({ buscar: valor.trim() === '' ? null : valor });
+  }
+
+  protected cambiarEstado(valor: FiltroEstado): void {
+    this.actualizar({ estado: valor === 'todas' ? null : valor });
+  }
+
+  protected cambiarPrioridad(valor: FiltroPrioridad): void {
+    this.actualizar({ prioridad: valor === 'todas' ? null : valor });
+  }
+
   protected limpiarFiltros(): void {
-    this.termino.set('');
-    this.filtroEstado.set('todas');
-    this.filtroPrioridad.set('todas');
+    this.actualizar({ buscar: null, estado: null, prioridad: null });
+  }
+
+  private actualizar(cambios: Record<string, string | null>): void {
+    this.router.navigate([], {
+      relativeTo: this.ruta,
+      queryParams: cambios,
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
 
   protected restablecer(): void {

@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import type { Actividad } from '../../modelos/actividad';
 import { ListaActividades } from './lista-actividades';
 
@@ -10,6 +11,7 @@ describe('ListaActividades', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [ListaActividades],
+      providers: [provideRouter([])],
     }).compileComponents();
   });
 

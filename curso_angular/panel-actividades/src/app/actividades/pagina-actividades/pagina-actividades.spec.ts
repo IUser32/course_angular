@@ -1,10 +1,12 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { PaginaActividades } from './pagina-actividades';
 
 describe('PaginaActividades', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [PaginaActividades],
+      providers: [provideRouter([])],
     }).compileComponents();
   });
 
