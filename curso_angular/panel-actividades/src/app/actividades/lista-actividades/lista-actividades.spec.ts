@@ -4,7 +4,7 @@ import type { Actividad } from '../../modelos/actividad';
 import { ListaActividades } from './lista-actividades';
 
 const ACTIVIDADES: Actividad[] = [
-  { id: 1, titulo: 'Revisar contraste', estado: 'en_progreso', prioridad: 'media', creadaEn: '2026-08-12', destacada: false },
+  { id: 1, titulo: 'Revisar contraste', estado: 'en_progreso', prioridad: 'media', creadaEn: '2026-08-12', destacada: false, descripcion: ''  },
 ];
 
 describe('ListaActividades', () => {

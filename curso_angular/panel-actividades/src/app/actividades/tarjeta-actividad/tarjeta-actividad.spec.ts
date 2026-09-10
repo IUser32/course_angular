@@ -9,6 +9,7 @@ const ACTIVIDAD: Actividad = {
   prioridad: 'media',
   creadaEn: '2026-08-12',
   destacada: false,
+  descripcion: '',
 };
 
 describe('TarjetaActividad', () => {
